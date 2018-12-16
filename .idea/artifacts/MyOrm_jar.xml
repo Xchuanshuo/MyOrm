@@ -1,9 +1,0 @@
-<component name="ArtifactManager">
-  <artifact type="jar" name="MyOrm:jar">
-    <output-path>$PROJECT_DIR$/out/artifacts/MyOrm_jar</output-path>
-    <root id="archive" name="MyOrm.jar">
-      <element id="module-output" name="MyOrm" />
-      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/mysql/mysql-connector-java/8.0.13/mysql-connector-java-8.0.13.jar" path-in-jar="/" />
-    </root>
-  </artifact>
-</component>
