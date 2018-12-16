@@ -6,7 +6,10 @@
     </artifacts-to-build>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="14b96dde-9a05-4fbe-801c-43df89f0051d" name="Default" comment="" />
+    <list default="true" id="14b96dde-9a05-4fbe-801c-43df89f0051d" name="Default" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <ignored path="$PROJECT_DIR$/out/" />
     <ignored path="$PROJECT_DIR$/target/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -76,14 +79,23 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="DemoComplexQuery.java" pinned="false" current-in-tab="true">
+      <file leaf-file-name="DemoComplexQuery.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/com/legend/orm/demo/DemoComplexQuery.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-1311">
-              <caret line="20" selection-start-line="20" selection-end-line="20" />
+            <state relative-caret-position="453">
+              <caret line="62" column="32" lean-forward="true" selection-start-line="62" selection-start-column="32" selection-end-line="62" selection-end-column="32" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name=".gitignore" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/.gitignore">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="84">
+              <caret line="2" column="7" selection-start-line="2" selection-start-column="7" selection-end-line="2" selection-end-column="7" />
             </state>
           </provider>
         </entry>
@@ -142,18 +154,6 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Exam.java" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/main/java/com/legend/orm/demo/Exam.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-714">
-              <caret line="13" column="14" selection-start-line="13" selection-start-column="14" selection-end-line="13" selection-end-column="14" />
-              <folding>
-                <element signature="imports" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
       <file leaf-file-name="DemoEvent.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/com/legend/orm/demo/DemoEvent.java">
           <provider selected="true" editor-type-id="text-editor">
@@ -205,6 +205,9 @@
       <find>selectSQL</find>
     </findStrings>
   </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
   <component name="GradleLocalSettings">
     <option name="projectSyncType">
       <map>
@@ -215,7 +218,6 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/src/main/java/com/legend/orm/Option.java" />
         <option value="$PROJECT_DIR$/src/main/java/com/legend/orm/E.java" />
         <option value="$PROJECT_DIR$/src/main/java/com/legend/orm/demo/DemoSimplePK.java" />
         <option value="$PROJECT_DIR$/src/main/java/com/legend/orm/demo/DemoDB.java" />
@@ -266,6 +268,7 @@
         <option value="$PROJECT_DIR$/src/main/java/com/legend/orm/core/LegendDB.java" />
         <option value="$PROJECT_DIR$/src/main/java/com/legend/orm/demo/DemoSimplePk.java" />
         <option value="$PROJECT_DIR$/src/main/java/com/legend/orm/core/LegendBase.java" />
+        <option value="$PROJECT_DIR$/.gitignore" />
       </list>
     </option>
   </component>
@@ -302,6 +305,7 @@
     <option name="width" value="1528" />
     <option name="height" value="958" />
   </component>
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
@@ -314,32 +318,6 @@
             <path>
               <item name="MyOrm" type="b2602c69:ProjectViewProjectNode" />
               <item name="MyOrm" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="MyOrm" type="b2602c69:ProjectViewProjectNode" />
-              <item name="MyOrm" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="MyOrm" type="b2602c69:ProjectViewProjectNode" />
-              <item name="MyOrm" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="main" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="MyOrm" type="b2602c69:ProjectViewProjectNode" />
-              <item name="MyOrm" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="main" type="462c0819:PsiDirectoryNode" />
-              <item name="java" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="MyOrm" type="b2602c69:ProjectViewProjectNode" />
-              <item name="MyOrm" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="main" type="462c0819:PsiDirectoryNode" />
-              <item name="java" type="462c0819:PsiDirectoryNode" />
-              <item name="orm" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -515,12 +493,12 @@
       <workItem from="1544842292360" duration="12196000" />
       <workItem from="1544859350498" duration="13373000" />
       <workItem from="1544940683176" duration="11918000" />
-      <workItem from="1544955183810" duration="9868000" />
+      <workItem from="1544955183810" duration="10904000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="131625000" />
+    <option name="totallyTimeSpent" value="132661000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -543,12 +521,12 @@
       <window_info anchor="bottom" id="Event Log" order="9" sideWeight="0.50053364" side_tool="true" weight="0.27675676" />
       <window_info anchor="right" id="Maven Projects" order="8" weight="0.32924226" />
       <window_info anchor="bottom" id="Database Changes" order="8" show_stripe_button="false" />
-      <window_info anchor="bottom" id="Version Control" order="6" show_stripe_button="false" sideWeight="0.4994664" weight="0.3261105" />
-      <window_info anchor="bottom" id="Run" order="11" sideWeight="0.4994664" weight="0.2627027" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="7" sideWeight="0.49893278" visible="true" weight="0.28756756" />
+      <window_info anchor="bottom" id="Version Control" order="6" sideWeight="0.4994664" weight="0.3261105" />
+      <window_info anchor="bottom" id="Run" order="11" sideWeight="0.4994664" weight="0.26218852" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="7" sideWeight="0.49893278" visible="true" weight="0.28710726" />
       <window_info id="Capture Tool" order="1" />
       <window_info id="Designer" order="2" />
-      <window_info content_ui="combo" x="498" y="112" width="407" height="839" id="Project" order="6" sideWeight="0.66816145" visible="true" weight="0.18409818" />
+      <window_info content_ui="combo" x="498" y="112" width="407" height="839" id="Project" order="6" sideWeight="0.66816145" weight="0.20586081" />
       <window_info anchor="right" id="Database" order="7" weight="0.32924226" />
       <window_info id="Structure" order="4" sideWeight="0.33183858" side_tool="true" weight="0.24172892" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.24955116" />
@@ -703,13 +681,6 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="jar://$USER_HOME$/.ideaLibSources/mysql-connector-java-8.0.13-sources.jar!/com/mysql/cj/jdbc/ConnectionWrapper.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="252">
-          <caret line="439" column="50" lean-forward="true" selection-start-line="439" selection-start-column="50" selection-end-line="439" selection-end-column="50" />
-        </state>
-      </provider>
-    </entry>
     <entry file="jar://$USER_HOME$/.ideaLibSources/mysql-connector-java-8.0.13-sources.jar!/com/mysql/cj/jdbc/MysqlPooledConnection.java">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="333">
@@ -1131,11 +1102,18 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/com/legend/orm/demo/DemoComplexQuery.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1311">
-          <caret line="20" selection-start-line="20" selection-end-line="20" />
+        <state relative-caret-position="453">
+          <caret line="62" column="32" lean-forward="true" selection-start-line="62" selection-start-column="32" selection-end-line="62" selection-end-column="32" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/.gitignore">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="84">
+          <caret line="2" column="7" selection-start-line="2" selection-start-column="7" selection-end-line="2" selection-end-column="7" />
         </state>
       </provider>
     </entry>
@@ -1158,7 +1136,7 @@
       </state>
       <state key="FacetStructureConfigurable.UI">
         <settings>
-          <last-edited />
+          <last-edited>No facets are configured</last-edited>
           <splitter-proportions>
             <option name="proportions">
               <list>
