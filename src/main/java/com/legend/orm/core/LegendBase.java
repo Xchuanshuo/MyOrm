@@ -3,6 +3,7 @@ package com.legend.orm.core;
 import com.legend.orm.core.model.ColumnInfo;
 import com.legend.orm.core.model.Index;
 import com.legend.orm.core.model.Option;
+import com.legend.orm.core.utils.StringUtils;
 import com.legend.orm.core.utils.Utils;
 
 import java.util.*;
@@ -135,7 +136,11 @@ public class LegendBase {
     }
 
     public LegendBase groupBy(String...fs) {
-        this.groupBys.addAll(Arrays.asList(fs));
+        List<String> list = new ArrayList<>();
+        for (String s: fs) {
+            list.add(String.format("`%s`", s));
+        }
+        this.groupBys.addAll(list);
         return this;
     }
 
@@ -155,7 +160,7 @@ public class LegendBase {
     }
 
     public LegendBase orderBy(String name) {
-        this.orderBys.add(new OrderBy(name));
+        this.orderBys.add(new OrderBy(name, null));
         return this;
     }
 
@@ -510,17 +515,15 @@ public class LegendBase {
         String value();
     }
 
-    static class OrderBy {
+    static public class OrderBy {
         private String name;
         private String direction;
 
-        public OrderBy(String name) {
-            this.name = name;
-            this.direction = "asc";
-        }
-
         public OrderBy(String name, String direction) {
             this.name = name;
+            if (direction == null) {
+                direction = "asc";
+            }
             this.direction = direction.toLowerCase();
         }
 
@@ -537,12 +540,12 @@ public class LegendBase {
         private Value value;
 
         public Setter(String name, Value value) {
-            this.name = name;
+            this.name = String.format("`%s`", name);
             this.value = value;
         }
 
         public String s() {
-            return String.format("`%s` = %s", name, value.value());
+            return String.format("%s = %s", name, value.value());
         }
     }
 
@@ -638,7 +641,11 @@ public class LegendBase {
         @Override
         public String s(int depth) {
             String str = String.format("`%s` like ", field);
-            return str+"'%"+value+"%'";
+            if (StringUtils.validate(value)) {
+                return str+"'%"+value+"%'";
+            } else {
+                return "null";
+            }
         }
     }
 
@@ -725,7 +732,11 @@ public class LegendBase {
                 return "null";
             }
             if (v instanceof String) {
-                return String.format("`%s`", v);
+                if (StringUtils.validate(v.toString())) {
+                    return String.format("'%s'", v);
+                } else {
+                    return "null";
+                }
             }
             return v.toString();
         }

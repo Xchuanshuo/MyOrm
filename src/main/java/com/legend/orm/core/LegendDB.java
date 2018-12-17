@@ -2,10 +2,12 @@ package com.legend.orm.core;
 
 import com.legend.orm.core.exception.LegendException;
 import com.legend.orm.core.factory.DBConnectionFactory;
+import com.legend.orm.core.factory.SQLBuilderFactory;
 import com.legend.orm.core.interfaces.*;
 import com.legend.orm.core.listener.ListenerHandler;
 import com.legend.orm.core.model.ColumnInfo;
 import com.legend.orm.core.model.Meta;
+import com.legend.orm.core.model.SelectParam;
 import com.legend.orm.core.utils.MetaUtils;
 import java.lang.reflect.Field;
 import java.sql.*;
@@ -18,6 +20,7 @@ import java.util.*;
  */
 public abstract class LegendDB {
 
+    private SQLBuilderFactory sqlFactory;
     private Executor executor;
     private List<LegendBase.OrderBy> orderByList;
     private List<String> groupByList;
@@ -32,6 +35,7 @@ public abstract class LegendDB {
     public LegendDB(String name, ListenerHandler listenerHandler) {
         this.name = name;
         this.listenerHandler = listenerHandler;
+        this.sqlFactory = SQLBuilderFactory.getInstance();
     }
 
     public void setExecutor(Executor executor) {
@@ -62,18 +66,7 @@ public abstract class LegendDB {
 
     public void create(Connection conn, Class<? extends IEntity> clazz,
                        String suffix) {
-        executor.withinPrepare(conn, createSQL(clazz, suffix), PreparedStatement::execute);
-    }
-
-
-    private String createSQL(Class<? extends IEntity> clazz, String suffix) {
-        Meta meta = MetaUtils.meta(clazz);
-        LegendBase legendBase = LegendBase.create().table(meta.name, suffix);
-        meta.columns.forEach((name, columnInfo) -> legendBase.column(columnInfo.name(), columnInfo.type(), columnInfo.autoIncrement()
-                , columnInfo.nullable(), columnInfo.defaultValue()));
-        meta.indices.indices().forEach(index -> legendBase.index(index.primaryKey(), index.unique(), index.columns()));
-        meta.options.options().forEach(option -> legendBase.option(option.key(), option.value()));
-        return legendBase.sql();
+        executor.withinPrepare(conn, sqlFactory.buildCreateSQL(clazz, suffix), PreparedStatement::execute);
     }
 
     public void drop(Class<? extends IEntity> clazz) {
@@ -85,13 +78,7 @@ public abstract class LegendDB {
     }
 
     public void drop(Connection conn, Class<? extends IEntity> clazz, String suffix) {
-        executor.withinPrepare(conn, dropSQL(clazz, suffix), PreparedStatement::execute);
-    }
-
-    public String dropSQL(Class<? extends IEntity> clazz, String suffix) {
-        Meta meta = MetaUtils.meta(clazz);
-        LegendBase legendBase = LegendBase.drop().table(meta.name, suffix);
-        return legendBase.sql();
+        executor.withinPrepare(conn, sqlFactory.buildDropSQL(clazz, suffix), PreparedStatement::execute);
     }
 
     public void truncate(Class<? extends IEntity> clazz) {
@@ -103,13 +90,7 @@ public abstract class LegendDB {
     }
 
     public void truncate(Connection conn, Class<? extends IEntity> clazz, String suffix) {
-        executor.withinPrepare(conn, truncateSQL(clazz, suffix), PreparedStatement::execute);
-    }
-
-    public String truncateSQL(Class<? extends IEntity> clazz, String suffix) {
-        Meta meta = MetaUtils.meta(clazz);
-        LegendBase legendBase = LegendBase.truncate().table(meta.name, suffix);
-        return legendBase.sql();
+        executor.withinPrepare(conn, sqlFactory.buildTruncateSQL(clazz, suffix), PreparedStatement::execute);
     }
 
     private <T extends IEntity> T translate(ResultSet resultSet, Class<T> clazz) throws SQLException {
@@ -140,7 +121,7 @@ public abstract class LegendDB {
 
     public <T extends IEntity> T get(Connection conn, Class<T> clazz, Object...ids) {
         Holder<T> holder = new Holder<>();
-        executor.withinQuery(conn, selectSQL(clazz, ids), stmt -> {
+        executor.withinQuery(conn, sqlFactory.buildSelectOneSQL(clazz, ids), stmt -> {
             for (int i=0;i<ids.length;i++) {
                 stmt.setObject(i+1, ids[i]);
             }
@@ -152,22 +133,6 @@ public abstract class LegendDB {
             return result;
         });
         return holder.value;
-    }
-
-    private String selectSQL(Class<? extends IEntity> clazz, Object...ids) {
-        Meta meta = MetaUtils.meta(clazz);
-        String[] columns = meta.indices.primary().columns();
-        if (columns.length != ids.length) {
-            throw new LegendException("ids length must match with primary columns ");
-        }
-        LegendBase.Filterable[] filters = new LegendBase.Filterable[ids.length];
-        for (int i=0;i<ids.length;i++) {
-            filters[i] = LegendBase.eq_(columns[i]);
-        }
-        IEntity empty = MetaUtils.empty(clazz, ids);
-        LegendBase legendBase = LegendBase.select().field("*").table(meta.name, empty.suffix())
-                .where(LegendBase.and(filters));
-        return legendBase.sql();
     }
 
     public <T extends IEntity> List<T> find(Class<T> clazz) {
@@ -194,7 +159,7 @@ public abstract class LegendDB {
         return holder.value;
     }
 
-    public <T extends IEntity> List<T> find(Connection conn, Class<T> clazz, String suffix,
+    public <T extends IEntity>  List<T> find(Connection conn, Class<T> clazz, String suffix,
                                             LegendBase.Filterable filter, Object...values) {
         return this.find(conn, clazz, suffix, filter, 0, 0, values);
     }
@@ -203,7 +168,9 @@ public abstract class LegendDB {
                                             String suffix, LegendBase.Filterable filter,
                                             int offset, int limit, Object...values) {
         Holder<List<T>> holder = new Holder<>();
-        executor.withinQuery(conn, findSQL(clazz, suffix, filter), stmt -> {
+        SelectParam param = new SelectParam(orderByList, groupByList
+                , this.limit, this.offset);
+        executor.withinQuery(conn, sqlFactory.buildFindSQL(clazz, suffix, filter, param), stmt -> {
             int i = 1;
             for (;i<=values.length;i++) {
                 stmt.setObject(i, values[i-1]);
@@ -225,28 +192,6 @@ public abstract class LegendDB {
         return holder.value;
     }
 
-    private String findSQL(Class<? extends IEntity> clazz, String suffix,
-                           LegendBase.Filterable filter) {
-        Meta meta = MetaUtils.meta(clazz);
-        LegendBase legendBase = LegendBase.select().field("*").table(meta.name, suffix);
-        if (filter != null) {
-            legendBase.where(filter);
-        }
-        if (orderByList!=null && orderByList.size()>0) {
-            orderByList.forEach(legendBase::orderBy);
-        }
-        if (groupByList!=null && groupByList.size()>0) {
-            groupByList.forEach(legendBase::groupBy);
-        }
-        if (offset > 0) {
-            legendBase.offset(offset);
-        }
-        if (limit > 0) {
-            legendBase.limit(limit);
-        }
-        return legendBase.sql();
-    }
-
     public LegendDB orderBy(String name, String direction) {
         if (orderByList == null) {
             orderByList = new ArrayList<>();
@@ -256,11 +201,7 @@ public abstract class LegendDB {
     }
 
     public LegendDB orderBy(String name) {
-        if (orderByList == null) {
-            orderByList = new ArrayList<>();
-        }
-        orderByList.add(new LegendBase.OrderBy(name));
-        return this;
+        return orderBy(name, null);
     }
 
     public LegendDB groupBy(String...fs) {
@@ -305,7 +246,7 @@ public abstract class LegendDB {
     public long count(Connection conn, Class<? extends IEntity> clazz,
                       String suffix, LegendBase.Filterable filter, Object...values) {
         Holder<Long> holder = new Holder<>();
-        LegendBase legendBase = countSQL(clazz, suffix, filter);
+        LegendBase legendBase = sqlFactory.buildCountSQL(clazz, suffix, filter);
         Context evt = Context.before(this, conn, clazz, legendBase, values);
         if (!listenerHandler.invokeListeners(evt)) {
             return -1;
@@ -330,15 +271,6 @@ public abstract class LegendDB {
         evt = Context.after(this, conn, clazz, legendBase, values, error, duration);
         listenerHandler.invokeListeners(evt);
         return holder.value;
-    }
-
-    private LegendBase countSQL(Class<? extends IEntity> clazz, String suffix, LegendBase.Filterable filter) {
-        Meta meta = MetaUtils.meta(clazz);
-        LegendBase legendBase = LegendBase.select().field("count(*)").table(meta.name, suffix);
-        if (filter != null) {
-            legendBase.where(filter);
-        }
-        return legendBase;
     }
 
     public void any(Class<? extends IEntity> clazz, LegendBase legendBase, IQueryOp op, Object...values) {
@@ -403,7 +335,7 @@ public abstract class LegendDB {
 
     public int delete(Connection conn, Class<? extends IEntity> clazz, Object...ids) {
         Holder<Integer> holder = new Holder<>();
-        LegendBase legendBase = deleteSQL(clazz, ids);
+        LegendBase legendBase = sqlFactory.buildDeleteObject(clazz, ids);
         Context evt = Context.before(this, conn, clazz, legendBase, ids);
         if (!listenerHandler.invokeListeners(evt)) {
             return -1;
@@ -413,21 +345,6 @@ public abstract class LegendDB {
         long duration = (System.nanoTime() - start) / 1000;
         listenerHandler.invokeListeners(Context.after(this, conn, clazz, legendBase, ids, error, duration));
         return holder.value;
-    }
-
-    private LegendBase deleteSQL(Class<? extends IEntity> clazz, Object...ids) {
-        Meta meta = MetaUtils.meta(clazz);
-        String[] columns = meta.indices.primary().columns();
-        if (columns.length != ids.length) {
-            throw new LegendException("ids length must match with primary columns");
-        }
-        LegendBase.Filterable[] filters = new LegendBase.Filterable[columns.length];
-        for (int i=0;i<ids.length;i++) {
-            filters[i] = LegendBase.eq_(columns[i]);
-        }
-        IEntity empty = MetaUtils.empty(clazz, ids);
-        LegendBase legendBase = LegendBase.delete().table(meta.name, empty.suffix()).where(LegendBase.and(filters));
-        return legendBase;
     }
 
     public <T extends IEntity> int update(T t) {
@@ -449,7 +366,7 @@ public abstract class LegendDB {
     public int update(Connection conn, Class<? extends IEntity> clazz,
                       Map<String, Object> values, Object...ids) {
         Holder<Integer> holder = new Holder<>();
-        LegendBase legendBase = updateSQL(clazz, values, ids);
+        LegendBase legendBase = sqlFactory.buildUpdateObject(clazz, values, ids);
         Object[] hybridValues = new Object[values.size() + ids.length];
         int i = 0;
         for (Object value: values.values()) {
@@ -486,29 +403,6 @@ public abstract class LegendDB {
             return e;
         }
         return null;
-    }
-
-    private LegendBase updateSQL(Class<? extends IEntity> clazz,
-                                 Map<String, Object> values, Object...ids) {
-        Meta meta = MetaUtils.meta(clazz);
-        String[] columns = meta.indices.primary().columns();
-        if (columns.length != ids.length) {
-            throw new LegendException("ids length must match with primary columns");
-        }
-        LegendBase.Filterable[] filters = new LegendBase.Filterable[ids.length];
-        for (int i=0;i<ids.length;i++) {
-            filters[i] = LegendBase.eq_(columns[i]);
-        }
-        IEntity empty = MetaUtils.empty(clazz, ids);
-        LegendBase legendBase = LegendBase.update().table(meta.name, empty.suffix()).where(LegendBase.and(filters));
-        values.forEach((name, value) -> {
-            ColumnInfo columnInfo = meta.fields.get(name);
-            if (columnInfo ==null || columnInfo.primary()) {
-                return;
-            }
-            legendBase.with_(columnInfo.name());
-        });
-        return legendBase;
     }
 
     public <T extends IEntity> boolean insert(T t) {
@@ -562,7 +456,7 @@ public abstract class LegendDB {
 
     public <T extends IEntity> boolean insert(Connection conn, T t, Map<String, Object> values) {
         Meta meta = MetaUtils.meta(t.getClass());
-        LegendBase legendBase = insertSQL(t, values);
+        LegendBase legendBase = sqlFactory.buildInsertObject(t, values);
         List<Object> paramList = new ArrayList<>();
         for (Map.Entry<String, ColumnInfo> entry: meta.columns.entrySet()) {
             ColumnInfo columnInfo = entry.getValue();
@@ -583,24 +477,4 @@ public abstract class LegendDB {
         listenerHandler.invokeListeners(evt);
         return error == null;
     }
-
-    private <T extends IEntity> LegendBase insertSQL(T t, Map<String, Object> values) {
-        Meta meta = MetaUtils.meta(t.getClass());
-        LegendBase legendBase = LegendBase.insert().table(meta.name, t.suffix());
-        for (Map.Entry<String, ColumnInfo> entry: meta.columns.entrySet()) {
-            ColumnInfo columnInfo = entry.getValue();
-            Object value = values.get(columnInfo.field().getName());
-            if (value == null) {
-                if (columnInfo.autoIncrement()) continue;
-                if (columnInfo.nullable()) continue;
-                if (!columnInfo.nullable() && columnInfo.defaultValue() != null
-                        && !columnInfo.defaultValue().isEmpty()) {
-                    continue;
-                }
-            }
-            legendBase.with_(entry.getKey());
-        }
-        return legendBase;
-    }
-
 }

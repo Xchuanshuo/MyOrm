@@ -21,9 +21,9 @@ public class DemoSimplePk {
         DemoLegendDB db = new DemoLegendDB("orm", URI);
         try {
             db.create(User.class);
-//            User user1 = new User("aa framjework", "hejllos", "传说salegend");
+            User user1 = new User("aas framjework", "hejllos", "传说salegend");
 //            User user2 = new User("bb fjramework", "wojrlds", "传asasalegendsas奇数");
-//            db.insert(user1);
+            db.insert(user1);
 //            db.insert(user2);
 //            System.out.println(user1.getId());
 //            User user = db.get(User.class, user1.getId());
