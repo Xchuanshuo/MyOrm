@@ -1,6 +1,6 @@
 package com.legend.orm.demo;
 
-import com.legend.orm.core.Executor;
+import com.legend.orm.core.Operator;
 import com.legend.orm.core.LegendDB;
 import com.legend.orm.core.factory.DBConnectionFactory;
 import com.legend.orm.core.listener.ListenerHandler;
@@ -28,11 +28,7 @@ public class DemoLegendDB extends LegendDB {
         dataSource.setUrl(uri);
         factory = DBConnectionFactory.getInstance();
         factory.setDatasource(dataSource);
-        setExecutor(new Executor(factory));
+        setOperator(new Operator(factory));
     }
 
-    @Override
-    protected Connection conn() {
-        return factory.getConnection();
-    }
 }

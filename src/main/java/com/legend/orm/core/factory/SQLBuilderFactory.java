@@ -8,6 +8,7 @@ import com.legend.orm.core.model.Meta;
 import com.legend.orm.core.model.SelectParam;
 import com.legend.orm.core.utils.MetaUtils;
 
+import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -23,7 +24,7 @@ public class SQLBuilderFactory {
 
     public static SQLBuilderFactory getInstance() {
         if (factory == null) {
-            synchronized(SQLBuilderFactory.factory) {
+            synchronized(SQLBuilderFactory.class) {
                 if (factory == null) {
                     factory = new SQLBuilderFactory();
                 }
@@ -32,14 +33,9 @@ public class SQLBuilderFactory {
         return factory;
     }
 
-    public LegendBase buildCountSQL(Class<? extends IEntity> clazz, String suffix
-            , LegendBase.Filterable filter) {
-        Meta meta = MetaUtils.meta(clazz);
-        LegendBase legendBase = LegendBase.select().field("count(*)").table(meta.name, suffix);
-        if (filter != null) {
-            legendBase.where(filter);
-        }
-        return legendBase;
+    public LegendBase buildCountSQL(Class<? extends IEntity> clazz, SelectParam param) {
+        param.setFieldList(Arrays.asList("count(*)"));
+        return buildFindObject(clazz, param);
     }
 
     public String buildSelectOneSQL(Class<? extends IEntity> clazz, Object...ids) {
@@ -57,6 +53,7 @@ public class SQLBuilderFactory {
                 .where(LegendBase.and(filters));
         return legendBase.sql();
     }
+
 
     public String buildDropSQL(Class<? extends IEntity> clazz, String suffix) {
         Meta meta = MetaUtils.meta(clazz);
@@ -80,13 +77,24 @@ public class SQLBuilderFactory {
         return legendBase.sql();
     }
 
+    public String buildFindSQL(Class<? extends IEntity> clazz, SelectParam param) {
+        return buildFindObject(clazz, param).sql();
+    }
 
-    public String buildFindSQL(Class<? extends IEntity> clazz, String suffix,
-                           LegendBase.Filterable filter, SelectParam param) {
+    public LegendBase buildFindObject(Class<? extends IEntity> clazz, SelectParam param) {
         Meta meta = MetaUtils.meta(clazz);
-        LegendBase legendBase = LegendBase.select().field("*").table(meta.name, suffix);
-        if (filter != null) {
-            legendBase.where(filter);
+        LegendBase legendBase = LegendBase.select();
+        if (param.getFieldList()!=null
+                && param.getFieldList().size() > 0) {
+            for (String fieldStr: param.getFieldList()) {
+                legendBase.field(fieldStr);
+            }
+        } else {
+            legendBase.field("*");
+        }
+        legendBase.table(meta.name, param.getSuffix());
+        if (param.getFilter() != null) {
+            legendBase.where(param.getFilter());
         }
         if (param.getGroupByList()!=null && param.getGroupByList().size()>0) {
             param.getGroupByList().forEach(legendBase::orderBy);
@@ -95,12 +103,15 @@ public class SQLBuilderFactory {
             param.getGroupByList().forEach(legendBase::groupBy);
         }
         if (param.getOffset() > 0) {
-            legendBase.offset(param.getOffset());
+            legendBase.offset_();
         }
         if (param.getLimit() > 0) {
-            legendBase.limit(param.getOffset());
+            legendBase.limit_();
         }
-        return legendBase.sql();
+        if (param.getHaving() != null) {
+            legendBase.having(param.getHaving());
+        }
+        return legendBase;
     }
 
     public <T extends IEntity> LegendBase buildInsertObject(T t, Map<String, Object> values) {
@@ -122,8 +133,29 @@ public class SQLBuilderFactory {
         return legendBase;
     }
 
-    public LegendBase buildUpdateObject(Class<? extends IEntity> clazz, Map<String, Object> values, Object...ids) {
+    public LegendBase buildUpdateObject(Class<? extends IEntity> clazz, Map<String, Object> values,
+            LegendBase.Filterable filter, Object...objects) {
         Meta meta = MetaUtils.meta(clazz);
+        IEntity empty = MetaUtils.empty(clazz);
+        LegendBase legendBase = null;
+        if (filter != null) {
+            legendBase = LegendBase.update().table(meta.name, empty.suffix())
+                    .where(filter);
+        } else {
+            legendBase = updateForIds(empty, meta, objects);
+        }
+        LegendBase finalLegendBase = legendBase;
+        values.forEach((name, value) -> {
+            ColumnInfo columnInfo = meta.fields.get(name);
+            if (columnInfo == null || columnInfo.primary()) {
+                return;
+            }
+            finalLegendBase.with_(columnInfo.name());
+        });
+        return legendBase;
+    }
+
+    private LegendBase updateForIds(IEntity empty, Meta meta, Object...ids) {
         String[] columns = meta.indices.primary().columns();
         if (columns.length != ids.length) {
             throw new LegendException("ids length must match with primary columns");
@@ -132,15 +164,7 @@ public class SQLBuilderFactory {
         for (int i=0;i<ids.length;i++) {
             filters[i] = LegendBase.eq_(columns[i]);
         }
-        IEntity empty = MetaUtils.empty(clazz, ids);
         LegendBase legendBase = LegendBase.update().table(meta.name, empty.suffix()).where(LegendBase.and(filters));
-        values.forEach((name, value) -> {
-            ColumnInfo columnInfo = meta.fields.get(name);
-            if (columnInfo ==null || columnInfo.primary()) {
-                return;
-            }
-            legendBase.with_(columnInfo.name());
-        });
         return legendBase;
     }
 

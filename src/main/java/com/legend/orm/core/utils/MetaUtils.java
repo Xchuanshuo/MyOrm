@@ -1,5 +1,6 @@
 package com.legend.orm.core.utils;
 
+import com.legend.orm.core.LegendDB;
 import com.legend.orm.core.annotation.Column;
 import com.legend.orm.core.annotation.Table;
 import com.legend.orm.core.exception.LegendException;
@@ -11,6 +12,8 @@ import com.legend.orm.core.model.Meta;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -102,5 +105,65 @@ public class MetaUtils {
             i++;
         }
         return empty;
+    }
+
+
+    public static <T extends IEntity> Object[] ids(T t) {
+        Meta meta = MetaUtils.meta(t.getClass());
+        Object[] ids = new Object[meta.indices.primary().columns().length];
+        int i = 0;
+        for (String name: meta.indices.primary().columns()) {
+            Field field = meta.columns.get(name).field();
+            try {
+                ids[i++] = field.get(t);
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
+        return ids;
+    }
+
+    public static <T extends IEntity> Map<String, Object> values(T t) {
+        Meta meta = MetaUtils.meta(t.getClass());
+        Map<String, Object> values = new HashMap<>();
+        meta.columns.forEach((name, columnInfo) -> {
+            Field field = columnInfo.field();
+            try {
+                values.put(field.getName(), field.get(t));
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        });
+        return values;
+    }
+
+    public static <T extends IEntity> Map<String, Object> insertDispose(T t, LegendDB.Holder lastInsertId, Field lastInsertField) {
+        Map<String, Object> values = new LinkedHashMap<>();
+        Meta meta = MetaUtils.meta(t.getClass());
+        for (Map.Entry<String, ColumnInfo> entry: meta.columns.entrySet()) {
+            ColumnInfo columnInfo = entry.getValue();
+            try {
+                Field field = columnInfo.field();
+                Object o = field.get(t);
+                if (columnInfo.autoIncrement() && o==null) {
+                    lastInsertId = new LegendDB.Holder<>();
+                    lastInsertField = columnInfo.field();
+                }
+                values.put(field.getName(), o);
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
+        return values;
+    }
+
+    public static Map<String, Object> updateDispose(Class<? extends IEntity> clazz, Map<String, Object> values) {
+        Map<String, Object> valueModify = new HashMap<>(values);
+        Meta meta = MetaUtils.meta(clazz);
+        // 移除主键列
+        for (String name: meta.indices.primary().fields()) {
+            valueModify.remove(name);
+        }
+        return valueModify;
     }
 }

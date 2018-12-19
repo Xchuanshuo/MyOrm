@@ -1,12 +1,7 @@
 package com.legend.orm.core;
 
-import com.legend.orm.core.exception.LegendException;
-import com.legend.orm.core.factory.DBConnectionFactory;
-import com.legend.orm.core.factory.SQLBuilderFactory;
 import com.legend.orm.core.interfaces.*;
 import com.legend.orm.core.listener.ListenerHandler;
-import com.legend.orm.core.model.ColumnInfo;
-import com.legend.orm.core.model.Meta;
 import com.legend.orm.core.model.SelectParam;
 import com.legend.orm.core.utils.MetaUtils;
 import java.lang.reflect.Field;
@@ -20,10 +15,11 @@ import java.util.*;
  */
 public abstract class LegendDB {
 
-    private SQLBuilderFactory sqlFactory;
+    private Operator operator;
     private Executor executor;
     private List<LegendBase.OrderBy> orderByList;
     private List<String> groupByList;
+    private LegendBase.Filterable having;
     private int offset = 0, limit = 0;
     ListenerHandler listenerHandler;
     private String name;
@@ -35,11 +31,11 @@ public abstract class LegendDB {
     public LegendDB(String name, ListenerHandler listenerHandler) {
         this.name = name;
         this.listenerHandler = listenerHandler;
-        this.sqlFactory = SQLBuilderFactory.getInstance();
+        this.executor = Executor.getInstance();
     }
 
-    public void setExecutor(Executor executor) {
-        this.executor = new Executor(DBConnectionFactory.getInstance());
+    public void setOperator(Operator operator) {
+        this.operator = operator;
     }
 
     public String name() {
@@ -50,23 +46,16 @@ public abstract class LegendDB {
         return listenerHandler;
     }
 
-    static class Holder<T> {
+    static public class Holder<T> {
         T value;
     }
-
-    protected abstract Connection conn();
 
     public void create(Class<? extends IEntity> clazz) {
        create(clazz, null);
     }
 
     public void create(Class<? extends IEntity> clazz, String suffix) {
-        executor.withinTx(conn -> create(conn, clazz, suffix));
-    }
-
-    public void create(Connection conn, Class<? extends IEntity> clazz,
-                       String suffix) {
-        executor.withinPrepare(conn, sqlFactory.buildCreateSQL(clazz, suffix), PreparedStatement::execute);
+        operator.withinTx(conn -> executor.create(conn, clazz, suffix));
     }
 
     public void drop(Class<? extends IEntity> clazz) {
@@ -74,11 +63,7 @@ public abstract class LegendDB {
     }
 
     public void drop(Class<? extends IEntity> clazz, String suffix) {
-        executor.withinTx(conn -> drop(conn, clazz, suffix));
-    }
-
-    public void drop(Connection conn, Class<? extends IEntity> clazz, String suffix) {
-        executor.withinPrepare(conn, sqlFactory.buildDropSQL(clazz, suffix), PreparedStatement::execute);
+        operator.withinTx(conn -> executor.drop(conn, clazz, suffix));
     }
 
     public void truncate(Class<? extends IEntity> clazz) {
@@ -86,110 +71,44 @@ public abstract class LegendDB {
     }
 
     public void truncate(Class<? extends IEntity> clazz, String suffix) {
-        executor.withinTx(conn -> truncate(conn, clazz, suffix));
-    }
-
-    public void truncate(Connection conn, Class<? extends IEntity> clazz, String suffix) {
-        executor.withinPrepare(conn, sqlFactory.buildTruncateSQL(clazz, suffix), PreparedStatement::execute);
-    }
-
-    private <T extends IEntity> T translate(ResultSet resultSet, Class<T> clazz) throws SQLException {
-        Meta meta = MetaUtils.meta(clazz);
-        ResultSetMetaData rsd = resultSet.getMetaData();
-        T result = MetaUtils.empty(clazz);
-        try {
-            for (int i=0;i<rsd.getColumnCount();i++) {
-                String name = rsd.getColumnName(i+1);
-                ColumnInfo columnInfo = meta.columns.get(name.toLowerCase());
-                if (columnInfo != null) {
-                    columnInfo.field().setAccessible(true);
-                    columnInfo.field().set(result, resultSet.getObject(i+1));
-                }
-            }
-
-        } catch (Exception e) {
-            throw new LegendException("entity class should provide default construct");
-        }
-        return result;
+        operator.withinTx(conn -> executor.truncate(conn, clazz, suffix));
     }
 
     public <T extends IEntity> T get(Class<T> clazz,Object...ids) {
         Holder<T> holder = new Holder<>();
-        executor.withinTx(conn -> holder.value = get(conn, clazz, ids), false);
-        return holder.value;
-    }
-
-    public <T extends IEntity> T get(Connection conn, Class<T> clazz, Object...ids) {
-        Holder<T> holder = new Holder<>();
-        executor.withinQuery(conn, sqlFactory.buildSelectOneSQL(clazz, ids), stmt -> {
-            for (int i=0;i<ids.length;i++) {
-                stmt.setObject(i+1, ids[i]);
-            }
-            ResultSet result = stmt.executeQuery();
-            if (!result.next()) {
-                return null;
-            }
-            holder.value = translate(result, clazz);
-            return result;
-        });
+        operator.withinTx(conn -> holder.value = executor.get(conn, clazz, ids), false);
         return holder.value;
     }
 
     public <T extends IEntity> List<T> find(Class<T> clazz) {
-        return this.find(clazz, null, null, 0, 0, new Object[]{});
+        return this.find(clazz, null, new Object[]{});
+    }
+
+    public <T extends IEntity> List<T> find(Class<T> clazz, String suffix) {
+        return this.find(clazz, suffix, null);
     }
 
     public <T extends IEntity> List<T> find(Class<T> clazz, LegendBase.Filterable filter, Object...values) {
-        return this.find(clazz,null, filter, 0, 0, values);
-    }
-
-    public <T extends IEntity> List<T> find(Class<T> clazz, String suffix, Object...values) {
-        return this.find(clazz, suffix, null, 0, 0, values);
+        return this.find(clazz, null, filter, values);
     }
 
     public <T extends IEntity> List<T> find(Class<T> clazz, String suffix,
                                             LegendBase.Filterable filter, Object...values) {
-        return this.find(clazz, suffix, filter, 0, 0, values);
+        Holder<List<T>> holder = new Holder<>();
+        operator.withinTx(conn -> holder.value=find(conn, clazz, suffix, filter, values), false);
+        return holder.value;
     }
 
-    public <T extends IEntity> List<T> find(Class<T> clazz, String suffix, LegendBase.Filterable filter,
-                                            int offset, int limit, Object...values) {
+    public <T extends IEntity>  List<T> find(Class<T> clazz, SelectParam param) {
         Holder<List<T>> holder = new Holder<>();
-        executor.withinTx(conn -> holder.value=find(conn, clazz, suffix, filter, offset, limit, values), false);
+        operator.withinTx(conn -> holder.value = executor.find(conn, clazz, param));
         return holder.value;
     }
 
     public <T extends IEntity>  List<T> find(Connection conn, Class<T> clazz, String suffix,
-                                            LegendBase.Filterable filter, Object...values) {
-        return this.find(conn, clazz, suffix, filter, 0, 0, values);
-    }
-
-    public <T extends IEntity> List<T> find(Connection conn, Class<T> clazz,
-                                            String suffix, LegendBase.Filterable filter,
-                                            int offset, int limit, Object...values) {
-        Holder<List<T>> holder = new Holder<>();
-        SelectParam param = new SelectParam(orderByList, groupByList
-                , this.limit, this.offset);
-        executor.withinQuery(conn, sqlFactory.buildFindSQL(clazz, suffix, filter, param), stmt -> {
-            int i = 1;
-            for (;i<=values.length;i++) {
-                stmt.setObject(i, values[i-1]);
-            }
-            if (offset > 0) {
-                stmt.setObject(i++, offset);
-            }
-            if (limit > 0) {
-                stmt.setObject(i++, limit);
-            }
-            List<T> result = new ArrayList<>();
-            ResultSet resultSet = stmt.executeQuery();
-            while (resultSet.next()) {
-                result.add(translate(resultSet, clazz));
-            }
-            holder.value = result;
-            return resultSet;
-        });
-        return holder.value;
+                                             LegendBase.Filterable filter,
+                                             Object...values) {
+        return executor.find(conn, clazz, buildParam(suffix, filter, values));
     }
 
     public LegendDB orderBy(String name, String direction) {
@@ -209,6 +128,11 @@ public abstract class LegendDB {
             groupByList = new ArrayList<>();
         }
         groupByList.addAll(Arrays.asList(fs));
+        return this;
+    }
+
+    public LegendDB having(LegendBase.Filterable having) {
+        this.having = having;
         return this;
     }
 
@@ -239,192 +163,49 @@ public abstract class LegendDB {
     public long count(Class<? extends IEntity> clazz, String suffix,
                       LegendBase.Filterable filter, Object...values) {
         Holder<Long> holder = new Holder<>();
-        executor.withinTx(conn -> holder.value = count(conn, clazz, suffix, filter, values), false);
-        return holder.value;
-    }
-
-    public long count(Connection conn, Class<? extends IEntity> clazz,
-                      String suffix, LegendBase.Filterable filter, Object...values) {
-        Holder<Long> holder = new Holder<>();
-        LegendBase legendBase = sqlFactory.buildCountSQL(clazz, suffix, filter);
-        Context evt = Context.before(this, conn, clazz, legendBase, values);
-        if (!listenerHandler.invokeListeners(evt)) {
-            return -1;
-        }
-        long start = System.nanoTime();
-        Exception error = null;
-        try {
-            executor.withinQuery(conn, legendBase.sql(), stmt -> {
-                int i = 1;
-                for (;i<=values.length;i++) {
-                    stmt.setObject(i, values[i-1]);
-                }
-                ResultSet resultSet = stmt.executeQuery();
-                resultSet.next();
-                holder.value = resultSet.getLong(1);
-                return resultSet;
-            });
-        } catch (RuntimeException e) {
-            error = e;
-        }
-        long duration = (System.nanoTime() - start) / 1000;
-        evt = Context.after(this, conn, clazz, legendBase, values, error, duration);
-        listenerHandler.invokeListeners(evt);
+        operator.withinTx(conn -> holder.value = executor.count(this, clazz
+                , buildParam(suffix, filter, values)), false);
         return holder.value;
     }
 
     public void any(Class<? extends IEntity> clazz, LegendBase legendBase, IQueryOp op, Object...values) {
-        executor.withinTx(conn -> any(conn, clazz, legendBase, op, values), false);
-    }
-
-    public void any(Connection conn, Class<? extends IEntity> clazz,
-                    LegendBase legendBase, IQueryOp op, Object...values) {
-        Context evt = Context.before(this, conn, clazz, legendBase, values);
-        if (!listenerHandler.invokeListeners(evt)) {
-            return;
-        }
-        long start = System.nanoTime();
-        Exception error = null;
-        try {
-            executor.withinQuery(conn, legendBase.sql(), op);
-        } catch (RuntimeException e) {
-            error = e;
-        }
-        long duration = (System.nanoTime() - start) / 1000;
-        listenerHandler.invokeListeners(Context.after(this, conn, clazz, legendBase, values, error, duration));
-    }
-
-    private <T extends IEntity> Object[] ids(T t) {
-        Meta meta = MetaUtils.meta(t.getClass());
-        Object[] ids = new Object[meta.indices.primary().columns().length];
-        int i = 0;
-        for (String name: meta.indices.primary().columns()) {
-            Field field = meta.columns.get(name).field();
-            try {
-                ids[i++] = field.get(t);
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            }
-        }
-        return ids;
-    }
-
-    private <T extends IEntity> Map<String, Object> values(T t) {
-        Meta meta = MetaUtils.meta(t.getClass());
-        Map<String, Object> values = new HashMap<>();
-        meta.columns.forEach((name, columnInfo) -> {
-            Field field = columnInfo.field();
-            try {
-                values.put(field.getName(), field.get(t));
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            }
-        });
-        return values;
+        operator.withinTx(conn -> executor.any(this, clazz, legendBase, op, values), false);
     }
 
     public <T extends IEntity> int delete(T t) {
-        return delete(t.getClass(), ids(t));
+        return delete(t.getClass(), MetaUtils.ids(t));
     }
 
     public int delete(Class<? extends IEntity> clazz, Object...ids) {
         Holder<Integer> holder = new Holder<>();
-        executor.withinTx(conn -> holder.value = delete(conn, clazz, ids));
-        return holder.value;
-    }
-
-    public int delete(Connection conn, Class<? extends IEntity> clazz, Object...ids) {
-        Holder<Integer> holder = new Holder<>();
-        LegendBase legendBase = sqlFactory.buildDeleteObject(clazz, ids);
-        Context evt = Context.before(this, conn, clazz, legendBase, ids);
-        if (!listenerHandler.invokeListeners(evt)) {
-            return -1;
-        }
-        long start = System.nanoTime();
-        Exception error = executeUpdate(conn, holder, legendBase, ids);
-        long duration = (System.nanoTime() - start) / 1000;
-        listenerHandler.invokeListeners(Context.after(this, conn, clazz, legendBase, ids, error, duration));
+        operator.withinTx(conn -> holder.value = executor.delete(this, clazz, ids));
         return holder.value;
     }
 
     public <T extends IEntity> int update(T t) {
-        return update(t.getClass(), values(t), ids(t));
+        return update(t.getClass(), MetaUtils.values(t), MetaUtils.ids(t));
     }
 
+    // 带where条件多条更新
+    public int update(Class<? extends IEntity> clazz, Map<String, Object> values
+            , LegendBase.Filterable filter, Object...filterValues) {
+        LegendDB.Holder<Integer> holder = new LegendDB.Holder<>();
+        Map<String, Object> valueModify = MetaUtils.updateDispose(clazz, values);
+        operator.withinTx(conn -> holder.value = executor.update(this, clazz, valueModify,
+                filter, filterValues));
+        return holder.value;
+    }
+
+    // 根据主键列id进行单条更新
     public int update(Class<? extends IEntity> clazz, Map<String, Object> values, Object...ids) {
-        Holder<Integer> holder = new Holder<>();
-        Map<String, Object> valueModify = new HashMap<>(values);
-        Meta meta = MetaUtils.meta(clazz);
-        // 移除主键列
-        for (String name: meta.indices.primary().fields()) {
-            valueModify.remove(name);
-        }
-        executor.withinTx(conn -> holder.value = update(conn, clazz, valueModify, ids));
-        return holder.value;
-    }
-
-    public int update(Connection conn, Class<? extends IEntity> clazz,
-                      Map<String, Object> values, Object...ids) {
-        Holder<Integer> holder = new Holder<>();
-        LegendBase legendBase = sqlFactory.buildUpdateObject(clazz, values, ids);
-        Object[] hybridValues = new Object[values.size() + ids.length];
-        int i = 0;
-        for (Object value: values.values()) {
-            hybridValues[i++] = value;
-        }
-        for (Object value: ids) {
-            hybridValues[i++] = value;
-        }
-        Context evt = Context.before(this, conn, clazz, legendBase, hybridValues);
-        if (!listenerHandler.invokeListeners(evt)) {
-            return -1;
-        }
-        long start = System.nanoTime();
-        Exception error = executeUpdate(conn, holder, legendBase, hybridValues);
-        long duration = (System.nanoTime() - start) / 1000;
-        listenerHandler.invokeListeners(Context.after(this, conn, clazz, legendBase, hybridValues, error, duration));
-        return holder.value;
-    }
-
-    private Exception executeUpdate(Connection conn, Holder<Integer> holder, LegendBase legendBase, Object[] hybridValues) {
-        try {
-            String sql = legendBase.sql();
-            System.out.println(legendBase.sql());
-            executor.withinPrepare(conn, sql, stmt -> {
-                for (int k=0;k<hybridValues.length;k++) {
-                    stmt.setObject(k+1, hybridValues[k]);
-                }
-                int val = stmt.executeUpdate();
-                if (holder != null) {
-                    holder.value = val;
-                }
-            });
-        } catch (RuntimeException e) {
-            return e;
-        }
-        return null;
+        return update(clazz, values, null, ids);
     }
 
     public <T extends IEntity> boolean insert(T t) {
-        Map<String, Object> values = new LinkedHashMap<>();
-        Meta meta = MetaUtils.meta(t.getClass());
         Holder<Integer> lastInsertId = null;
         Field lastInsertField = null;
-        for (Map.Entry<String, ColumnInfo> entry: meta.columns.entrySet()) {
-            ColumnInfo columnInfo = entry.getValue();
-            try {
-                Field field = columnInfo.field();
-                Object o = field.get(t);
-                if (columnInfo.autoIncrement() && o==null) {
-                    lastInsertId = new Holder<>();
-                    lastInsertField = columnInfo.field();
-                }
-                values.put(field.getName(), o);
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            }
-        }
-        boolean res = insert(t, values, lastInsertId);
+        Map<String, Object> values = MetaUtils.insertDispose(t, lastInsertId, lastInsertField);
+        boolean res = executor.insert(this, t, values, lastInsertId);
         if (res && lastInsertId!=null && lastInsertId.value != null) {
             try {
                 lastInsertField.set(t, lastInsertId.value);
@@ -435,46 +216,20 @@ public abstract class LegendDB {
         return res;
     }
 
-    public <T extends IEntity> boolean insert(T t, Map<String, Object> values
-            , Holder<Integer> lastInsertId) {
-        Holder<Boolean> holder = new Holder<>();
-        executor.withinTx(conn -> {
-            holder.value = insert(conn, t, values);
-            if (lastInsertId != null) {
-                LegendBase legendBase = LegendBase.select().field("last_insert_id()");
-                this.any(conn, t.getClass(), legendBase, stmt -> {
-                    ResultSet resultSet = stmt.executeQuery();
-                    if (resultSet.next()) {
-                        lastInsertId.value = resultSet.getInt(1);
-                    }
-                    return resultSet;
-                });
-            }
-        });
-        return holder.value;
+    private SelectParam buildParam(String suffix, LegendBase.Filterable filter, Object...values) {
+        SelectParam selectParam = SelectParam.builder().offset(offset).limit(limit)
+                .filter(filter).suffix(suffix)
+                .valueList(Arrays.asList(values))
+                .having(having).build();
+        if (orderByList != null) {
+            selectParam.setOrderByList(new ArrayList<>(orderByList));
+            orderByList.clear();
+        }
+        if (groupByList != null) {
+            selectParam.setGroupByList(new ArrayList<>(groupByList));
+            groupByList.clear();
+        }
+        return selectParam;
     }
 
-    public <T extends IEntity> boolean insert(Connection conn, T t, Map<String, Object> values) {
-        Meta meta = MetaUtils.meta(t.getClass());
-        LegendBase legendBase = sqlFactory.buildInsertObject(t, values);
-        List<Object> paramList = new ArrayList<>();
-        for (Map.Entry<String, ColumnInfo> entry: meta.columns.entrySet()) {
-            ColumnInfo columnInfo = entry.getValue();
-            Object value = values.get(columnInfo.field().getName());
-            if (value != null) {
-                paramList.add(value);
-            }
-        }
-        Object[] paramArray = paramList.toArray();
-        Context evt = Context.before(this, conn, t.getClass(), legendBase, paramArray);
-        if (!listenerHandler.invokeListeners(evt)) {
-            return false;
-        }
-        long start = System.nanoTime();
-        Exception error = executeUpdate(conn, null, legendBase, paramArray);
-        long duration = (System.nanoTime() - start) / 1000;
-        evt = Context.after(this, conn, t.getClass(), legendBase, paramArray, error, duration);
-        listenerHandler.invokeListeners(evt);
-        return error == null;
-    }
 }
