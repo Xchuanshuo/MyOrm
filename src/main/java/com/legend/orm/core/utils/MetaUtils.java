@@ -1,12 +1,12 @@
 package com.legend.orm.core.utils;
 
-import com.legend.orm.core.LegendDB;
 import com.legend.orm.core.annotation.Column;
 import com.legend.orm.core.annotation.Table;
 import com.legend.orm.core.exception.LegendException;
 import com.legend.orm.core.factory.MetaFactory;
 import com.legend.orm.core.interfaces.IEntity;
 import com.legend.orm.core.model.ColumnInfo;
+import com.legend.orm.core.model.Holder;
 import com.legend.orm.core.model.Index;
 import com.legend.orm.core.model.Meta;
 
@@ -137,7 +137,7 @@ public class MetaUtils {
         return values;
     }
 
-    public static <T extends IEntity> Map<String, Object> insertDispose(T t, LegendDB.Holder lastInsertId, Field lastInsertField) {
+    public static <T extends IEntity> Map<String, Object> insertDispose(T t, Holder lastInsertId, Field lastInsertField) {
         Map<String, Object> values = new LinkedHashMap<>();
         Meta meta = MetaUtils.meta(t.getClass());
         for (Map.Entry<String, ColumnInfo> entry: meta.columns.entrySet()) {
@@ -146,7 +146,7 @@ public class MetaUtils {
                 Field field = columnInfo.field();
                 Object o = field.get(t);
                 if (columnInfo.autoIncrement() && o==null) {
-                    lastInsertId = new LegendDB.Holder<>();
+                    lastInsertId = new Holder<>();
                     lastInsertField = columnInfo.field();
                 }
                 values.put(field.getName(), o);

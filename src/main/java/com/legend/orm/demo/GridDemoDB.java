@@ -1,6 +1,6 @@
 package com.legend.orm.demo;
 
-import com.legend.orm.core.GridDB;
+import com.legend.orm.core.crud.GridDB;
 
 /**
  * @author Legend

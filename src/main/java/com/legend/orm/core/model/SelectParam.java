@@ -1,6 +1,6 @@
 package com.legend.orm.core.model;
 
-import com.legend.orm.core.LegendBase;
+import com.legend.orm.core.crud.LegendBase;
 
 import java.util.List;
 

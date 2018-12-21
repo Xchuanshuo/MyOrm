@@ -1,12 +1,10 @@
 package com.legend.orm.demo;
 
 import com.legend.orm.core.Operator;
-import com.legend.orm.core.LegendDB;
+import com.legend.orm.core.crud.LegendDB;
 import com.legend.orm.core.factory.DBConnectionFactory;
 import com.legend.orm.core.listener.ListenerHandler;
 import com.mysql.cj.jdbc.MysqlConnectionPoolDataSource;
-
-import java.sql.Connection;
 
 
 /**

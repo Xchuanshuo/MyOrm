@@ -1,6 +1,6 @@
 package com.legend.orm.core.factory;
 
-import com.legend.orm.core.LegendBase;
+import com.legend.orm.core.crud.LegendBase;
 import com.legend.orm.core.exception.LegendException;
 import com.legend.orm.core.interfaces.IEntity;
 import com.legend.orm.core.model.ColumnInfo;

@@ -5,9 +5,6 @@ import com.legend.orm.core.factory.DBConnectionFactory;
 import com.legend.orm.core.interfaces.IPrepareOp;
 import com.legend.orm.core.interfaces.IQueryOp;
 import com.legend.orm.core.interfaces.ITransactionOp;
-import com.legend.orm.core.listener.ListenerHandler;
-
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -110,6 +107,4 @@ public class Operator {
             }
         }
     }
-
-
 }

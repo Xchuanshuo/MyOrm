@@ -1,5 +1,7 @@
 package com.legend.orm.core;
 
+import com.legend.orm.core.crud.LegendBase;
+import com.legend.orm.core.crud.LegendDB;
 import com.legend.orm.core.interfaces.IEntity;
 
 import java.sql.Connection;

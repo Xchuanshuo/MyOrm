@@ -1,5 +1,7 @@
 package com.legend.orm.core;
 
+import com.legend.orm.core.crud.LegendBase;
+import com.legend.orm.core.crud.LegendDB;
 import com.legend.orm.core.exception.LegendException;
 import com.legend.orm.core.factory.DBConnectionFactory;
 import com.legend.orm.core.factory.SQLBuilderFactory;
@@ -7,6 +9,7 @@ import com.legend.orm.core.interfaces.IEntity;
 import com.legend.orm.core.interfaces.IQueryOp;
 import com.legend.orm.core.listener.ListenerHandler;
 import com.legend.orm.core.model.ColumnInfo;
+import com.legend.orm.core.model.Holder;
 import com.legend.orm.core.model.Meta;
 import com.legend.orm.core.model.SelectParam;
 import com.legend.orm.core.utils.MetaUtils;
@@ -42,17 +45,39 @@ public class Executor {
         return executor;
     }
 
-    public void create(Connection conn, Class<? extends IEntity> clazz,
+    public void create(Class<? extends IEntity> clazz, String suffix) {
+        operator.withinTx(conn -> executor.create(conn, clazz, suffix));
+    }
+
+    private void create(Connection conn, Class<? extends IEntity> clazz,
                        String suffix) {
         operator.withinPrepare(conn, sqlFactory.buildCreateSQL(clazz, suffix), PreparedStatement::execute);
     }
 
-    public void drop(Connection conn, Class<? extends IEntity> clazz, String suffix) {
+    public void drop(Class<? extends IEntity> clazz, String suffix) {
+        operator.withinTx(conn -> executor.drop(conn, clazz, suffix));
+    }
+
+    private void drop(Connection conn, Class<? extends IEntity> clazz, String suffix) {
         operator.withinPrepare(conn, sqlFactory.buildDropSQL(clazz, suffix), PreparedStatement::execute);
     }
 
-    public <T extends IEntity> T get(Connection conn, Class<T> clazz, Object...ids) {
-        LegendDB.Holder<T> holder = new LegendDB.Holder<>();
+    public void truncate(Class<? extends IEntity> clazz, String suffix) {
+        operator.withinTx(conn -> executor.truncate(conn, clazz, suffix));
+    }
+
+    private void truncate(Connection conn, Class<? extends IEntity> clazz, String suffix) {
+        operator.withinPrepare(conn, sqlFactory.buildTruncateSQL(clazz, suffix), PreparedStatement::execute);
+    }
+
+    public <T extends IEntity> T get(Class<T> clazz, Object...ids) {
+        Holder<T> holder = new Holder<>();
+        operator.withinTx(conn -> holder.value = executor.get(conn, clazz, ids), false);
+        return holder.value;
+    }
+
+    private  <T extends IEntity> T get(Connection conn, Class<T> clazz, Object...ids) {
+        Holder<T> holder = new Holder<>();
         operator.withinQuery(conn, sqlFactory.buildSelectOneSQL(clazz, ids), stmt -> {
             for (int i=0;i<ids.length;i++) {
                 stmt.setObject(i+1, ids[i]);
@@ -67,10 +92,7 @@ public class Executor {
         return holder.value;
     }
 
-    public void truncate(Connection conn, Class<? extends IEntity> clazz, String suffix) {
-        operator.withinPrepare(conn, sqlFactory.buildTruncateSQL(clazz, suffix), PreparedStatement::execute);
-    }
-    public  <T extends IEntity> T translate(ResultSet resultSet, Class<T> clazz) throws SQLException {
+    public <T extends IEntity> T translate(ResultSet resultSet, Class<T> clazz) throws SQLException {
         Meta meta = MetaUtils.meta(clazz);
         ResultSetMetaData rsd = resultSet.getMetaData();
         T result = MetaUtils.empty(clazz);
@@ -90,9 +112,9 @@ public class Executor {
         return result;
     }
 
-    public <T extends IEntity> List<T> find(Connection conn, Class<T> clazz,
-                                           SelectParam param) {
-        LegendDB.Holder<List<T>> holder = new LegendDB.Holder<>();
+    public <T extends IEntity> List<T> find(Class<T> clazz, SelectParam param) {
+        Connection conn = connectionFactory.getConnection();
+        Holder<List<T>> holder = new Holder<>();
         operator.withinQuery(conn, sqlFactory.buildFindSQL(clazz, param), stmt -> {
             int i = 1;
             for (;i<=param.getValueList().size();i++) {
@@ -115,10 +137,19 @@ public class Executor {
         return holder.value;
     }
 
-    public int update(LegendDB db, Class<? extends IEntity> clazz,
+    // 带where条件多条更新
+    public int update(LegendDB db, Class<? extends IEntity> clazz, Map<String, Object> values
+            , LegendBase.Filterable filter, Object...filterValues) {
+        Holder<Integer> holder = new Holder<>();
+        Map<String, Object> valueModify = MetaUtils.updateDispose(clazz, values);
+        operator.withinTx(conn -> holder.value = this.update(conn, db, clazz, valueModify,
+                filter, filterValues));
+        return holder.value;
+    }
+
+    private int update(Connection conn, LegendDB db, Class<? extends IEntity> clazz,
                       Map<String, Object> values, LegendBase.Filterable filter, Object...objects) {
-        Connection conn = connectionFactory.getConnection();
-        LegendDB.Holder<Integer> holder = new LegendDB.Holder<>();
+        Holder<Integer> holder = new Holder<>();
         LegendBase legendBase = sqlFactory.buildUpdateObject(clazz, values, filter, objects);
         Object[] hybridValues = new Object[values.size() + objects.length];
         int i = 0;
@@ -133,7 +164,7 @@ public class Executor {
             return -1;
         }
         long start = System.nanoTime();
-        Exception error = this.executeUpdate(holder, legendBase, hybridValues);
+        Exception error = this.executeUpdate(conn, holder, legendBase, hybridValues);
         long duration = (System.nanoTime() - start) / 1000;
         listenerHandler.invokeListeners(Context.after(db, conn, clazz, legendBase, hybridValues, error, duration));
         return holder.value;
@@ -142,7 +173,7 @@ public class Executor {
     public long count(LegendDB db, Class<? extends IEntity> clazz,
                      SelectParam param) {
         Connection conn = connectionFactory.getConnection();
-        LegendDB.Holder<Long> holder = new LegendDB.Holder<>();
+        Holder<Long> holder = new Holder<>();
         LegendBase legendBase = sqlFactory.buildCountSQL(clazz, param);
         Context evt = Context.before(db, conn, clazz, legendBase, param.getValueList().toArray());
         if (!listenerHandler.invokeListeners(evt)) {
@@ -178,13 +209,13 @@ public class Executor {
     }
 
     public <T extends IEntity> boolean insert(LegendDB db, T t, Map<String, Object> values
-            , LegendDB.Holder<Integer> lastInsertId) {
-        LegendDB.Holder<Boolean> holder = new LegendDB.Holder<>();
+            , Holder<Integer> lastInsertId) {
+        Holder<Boolean> holder = new Holder<>();
         operator.withinTx(conn -> {
             holder.value = insert(db, t, values);
             if (lastInsertId != null) {
                 LegendBase legendBase = LegendBase.select().field("last_insert_id()");
-                this.any(db, t.getClass(), legendBase, stmt -> {
+                this.any(conn, db, t.getClass(), legendBase, stmt -> {
                     ResultSet resultSet = stmt.executeQuery();
                     if (resultSet.next()) {
                         lastInsertId.value = resultSet.getInt(1);
@@ -213,7 +244,8 @@ public class Executor {
             return false;
         }
         long start = System.nanoTime();
-        Exception error = this.executeUpdate(null, legendBase, paramArray);
+        Exception error = this.executeUpdate(connectionFactory.getConnection(),
+                null, legendBase, paramArray);
         long duration = (System.nanoTime() - start) / 1000;
         evt = Context.after(db, connectionFactory.getConnection(), t.getClass(), legendBase, paramArray, error, duration);
         listenerHandler.invokeListeners(evt);
@@ -221,24 +253,33 @@ public class Executor {
     }
 
     public int delete(LegendDB db, Class<? extends IEntity> clazz, Object...ids) {
-        Connection conn = connectionFactory.getConnection();
-        LegendDB.Holder<Integer> holder = new LegendDB.Holder<>();
+        Holder<Integer> holder = new Holder<>();
+        operator.withinTx(conn -> holder.value = executor.delete(conn, db, clazz, ids));
+        return holder.value;
+    }
+
+    private int delete(Connection conn, LegendDB db, Class<? extends IEntity> clazz, Object...ids) {
+        Holder<Integer> holder = new Holder<>();
         LegendBase legendBase = sqlFactory.buildDeleteObject(clazz, ids);
         Context evt = Context.before(db, conn, clazz, legendBase, ids);
         if (!listenerHandler.invokeListeners(evt)) {
             return -1;
         }
         long start = System.nanoTime();
-        Exception error = this.executeUpdate(holder, legendBase, ids);
+        Exception error = this.executeUpdate(conn, holder, legendBase, ids);
         long duration = (System.nanoTime() - start) / 1000;
         listenerHandler.invokeListeners(Context.after(db, conn
                 , clazz, legendBase, ids, error, duration));
         return holder.value;
     }
 
-    public void any(LegendDB db, Class<? extends IEntity> clazz,
+    public void any(Class<? extends IEntity> clazz, LegendDB db,
                     LegendBase legendBase, IQueryOp op, Object...values) {
-        Connection conn = connectionFactory.getConnection();
+        operator.withinTx(conn -> this.any(conn, db, clazz, legendBase, op, values), false);
+    }
+
+    private void any(Connection conn, LegendDB db, Class<? extends IEntity> clazz,
+                    LegendBase legendBase, IQueryOp op, Object...values) {
         Context evt = Context.before(db, conn, clazz, legendBase, values);
         if (!listenerHandler.invokeListeners(evt)) {
             return;
@@ -254,11 +295,11 @@ public class Executor {
         listenerHandler.invokeListeners(Context.after(db, conn, clazz, legendBase, values, error, duration));
     }
 
-    public Exception executeUpdate(LegendDB.Holder<Integer> holder, LegendBase legendBase, Object[] hybridValues) {
+    public Exception executeUpdate(Connection conn, Holder<Integer> holder, LegendBase legendBase, Object[] hybridValues) {
         try {
             String sql = legendBase.sql();
             System.out.println(legendBase.sql());
-            operator.withinPrepare(connectionFactory.getConnection(),sql, stmt -> {
+            operator.withinPrepare(conn, sql, stmt -> {
                 for (int k=0;k<hybridValues.length;k++) {
                     stmt.setObject(k+1, hybridValues[k]);
                 }

@@ -1,4 +1,4 @@
-package com.legend.orm.core;
+package com.legend.orm.core.crud;
 
 import com.legend.orm.core.interfaces.IEntity;
 import com.legend.orm.core.interfaces.IGridable;
