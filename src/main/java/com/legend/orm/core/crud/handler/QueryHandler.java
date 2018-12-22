@@ -9,6 +9,7 @@ import com.legend.orm.core.model.SelectParam;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -20,10 +21,10 @@ public class QueryHandler {
 
     private Executor executor = Executor.getInstance();
     private LegendDB legendDB;
-    List<LegendBase.OrderBy> orderByList;
-    List<String> groupByList;
-    LegendBase.Filterable having;
-    int offset = 0, limit = 0;
+    private List<LegendBase.OrderBy> orderByList;
+    private List<String> groupByList;
+    private LegendBase.Filterable having;
+    private int offset = 0, limit = 0;
 
     public QueryHandler(LegendDB legendDB) {
         this.legendDB = legendDB;
@@ -100,6 +101,86 @@ public class QueryHandler {
 
     public long count(Class<? extends IEntity> clazz, SelectParam param) {
         return executor.count(legendDB, clazz, param);
+    }
+
+    public long sum(Class<? extends IEntity> clazz, String fieldStr) {
+        return this.sum(clazz, fieldStr, null);
+    }
+
+    public long sum(Class<? extends IEntity> clazz, String fieldStr,
+                    LegendBase.Filterable filter, Object...values) {
+        return this.sum(clazz, fieldStr, null, filter, values);
+    }
+
+    public long sum(Class<? extends IEntity> clazz, String fieldStr, String suffix,
+                    LegendBase.Filterable filter, Object...values) {
+        SelectParam param = buildParam(suffix, filter, values);
+        param.setFieldList(Collections.singletonList(fieldStr));
+        return this.sum(clazz, param);
+    }
+
+    public long sum(Class<? extends IEntity> clazz, SelectParam param) {
+        return executor.sum(legendDB, clazz, param);
+    }
+
+    public long average(Class<? extends IEntity> clazz, String fieldStr) {
+        return this.average(clazz, fieldStr, null);
+    }
+
+    public long average(Class<? extends IEntity> clazz, String fieldStr,
+                    LegendBase.Filterable filter, Object...values) {
+        return this.average(clazz, fieldStr, null, filter, values);
+    }
+
+    public long average(Class<? extends IEntity> clazz, String fieldStr, String suffix,
+                    LegendBase.Filterable filter, Object...values) {
+        SelectParam param = buildParam(suffix, filter, values);
+        param.setFieldList(Collections.singletonList(fieldStr));
+        return this.average(clazz, param);
+    }
+
+    public long average(Class<? extends IEntity> clazz, SelectParam param) {
+        return executor.average(legendDB, clazz, param);
+    }
+
+    public long min(Class<? extends IEntity> clazz, String fieldStr) {
+        return this.min(clazz, fieldStr, null);
+    }
+
+    public long min(Class<? extends IEntity> clazz, String fieldStr,
+                    LegendBase.Filterable filter, Object...values) {
+        return this.min(clazz, fieldStr, null, filter, values);
+    }
+
+    public long min(Class<? extends IEntity> clazz, String fieldStr, String suffix,
+                    LegendBase.Filterable filter, Object...values) {
+        SelectParam param = buildParam(suffix, filter, values);
+        param.setFieldList(Collections.singletonList(fieldStr));
+        return this.min(clazz, param);
+    }
+
+    public long min(Class<? extends IEntity> clazz, SelectParam param) {
+        return executor.min(legendDB, clazz, param);
+    }
+
+    public long max(Class<? extends IEntity> clazz, String fieldStr) {
+        return this.max(clazz, fieldStr, null);
+    }
+
+    public long max(Class<? extends IEntity> clazz, String fieldStr,
+                    LegendBase.Filterable filter, Object...values) {
+        return this.max(clazz, fieldStr, null, filter, values);
+    }
+
+    public long max(Class<? extends IEntity> clazz, String fieldStr, String suffix,
+                      LegendBase.Filterable filter, Object...values) {
+        SelectParam param = buildParam(suffix, filter, values);
+        param.setFieldList(Collections.singletonList(fieldStr));
+        return this.max(clazz, param);
+    }
+
+    public long max(Class<? extends IEntity> clazz, SelectParam param) {
+        return executor.max(legendDB, clazz, param);
     }
 
     public void any(Class<? extends IEntity> clazz, LegendBase legendBase, IQueryOp op, Object...values) {

@@ -8,6 +8,7 @@ import com.legend.orm.core.crud.handler.TableHandler;
 import com.legend.orm.core.crud.handler.UpdateHandler;
 import com.legend.orm.core.interfaces.*;
 import com.legend.orm.core.listener.ListenerHandler;
+import com.legend.orm.core.model.SelectParam;
 import com.legend.orm.core.utils.MetaUtils;
 
 import java.util.*;
@@ -122,7 +123,7 @@ public abstract class LegendDB {
     }
 
     public long count(Class<? extends IEntity> clazz) {
-        return this.count(clazz, null);
+        return this.count(clazz, "");
     }
 
     public long count(Class<? extends IEntity> clazz, LegendBase.Filterable filter, Object...values) {
@@ -134,6 +135,66 @@ public abstract class LegendDB {
         QueryHandler queryHandler = new QueryHandler(this);
         LegendBase.Filterable filter = null;
         return queryHandler.count(clazz, suffix, filter);
+    }
+
+    public long max(Class<? extends IEntity> clazz, String fieldStr) {
+        return this.max(clazz, fieldStr, null);
+    }
+
+    public long max(Class<? extends IEntity> clazz, String fieldStr,
+                    LegendBase.Filterable filter, Object...values) {
+        return this.max(clazz, fieldStr, null, filter, values);
+    }
+
+    public long max(Class<? extends IEntity> clazz, String fieldStr, String suffix,
+                    LegendBase.Filterable filter, Object...values) {
+        QueryHandler queryHandler = new QueryHandler(this);
+        return queryHandler.max(clazz, fieldStr, suffix, filter, values);
+    }
+
+    public long min(Class<? extends IEntity> clazz, String fieldStr) {
+        return this.min(clazz, fieldStr, null);
+    }
+
+    public long min(Class<? extends IEntity> clazz, String fieldStr,
+                    LegendBase.Filterable filter, Object...values) {
+        return this.min(clazz, fieldStr, null, filter, values);
+    }
+
+    public long min(Class<? extends IEntity> clazz, String fieldStr, String suffix,
+                    LegendBase.Filterable filter, Object...values) {
+        QueryHandler queryHandler = new QueryHandler(this);
+        return queryHandler.min(clazz, fieldStr, suffix, filter, values);
+    }
+
+    public long sum(Class<? extends IEntity> clazz, String fieldStr) {
+        return this.sum(clazz, fieldStr, null);
+    }
+
+    public long sum(Class<? extends IEntity> clazz, String fieldStr,
+                    LegendBase.Filterable filter, Object...values) {
+        return this.sum(clazz, fieldStr, null, filter, values);
+    }
+
+    public long sum(Class<? extends IEntity> clazz, String fieldStr, String suffix,
+                    LegendBase.Filterable filter, Object...values) {
+        QueryHandler queryHandler = new QueryHandler(this);
+        return queryHandler.sum(clazz, fieldStr, suffix, filter, values);
+    }
+
+    public long average(Class<? extends IEntity> clazz, String fieldStr) {
+        return this.average(clazz, fieldStr, null);
+    }
+
+    public long average(Class<? extends IEntity> clazz, String fieldStr,
+                    LegendBase.Filterable filter, Object...values) {
+        return this.average(clazz, fieldStr, null, filter, values);
+    }
+
+    public long average(Class<? extends IEntity> clazz, String fieldStr, String suffix,
+                    LegendBase.Filterable filter, Object...values) {
+        QueryHandler queryHandler = new QueryHandler(this);
+        return queryHandler.average(clazz, fieldStr, suffix, filter, values);
     }
 
     public void any(Class<? extends IEntity> clazz, LegendBase legendBase, IQueryOp op, Object...values) {

@@ -148,7 +148,7 @@ public class Executor {
     }
 
     private int update(Connection conn, LegendDB db, Class<? extends IEntity> clazz,
-                      Map<String, Object> values, LegendBase.Filterable filter, Object...objects) {
+                       Map<String, Object> values, LegendBase.Filterable filter, Object...objects) {
         Holder<Integer> holder = new Holder<>();
         LegendBase legendBase = sqlFactory.buildUpdateObject(clazz, values, filter, objects);
         Object[] hybridValues = new Object[values.size() + objects.length];
@@ -170,38 +170,90 @@ public class Executor {
         return holder.value;
     }
 
+    public long sum(LegendDB legendDB, Class<? extends IEntity> clazz,
+                    SelectParam param) {
+        Connection conn = connectionFactory.getConnection();
+        Holder<Long> holder = new Holder<>();
+        LegendBase legendBase = sqlFactory.buildSumObject(clazz, param);
+        Context evt = Context.before(legendDB, conn, clazz, legendBase, param.getValueList().toArray());
+        if (!listenerHandler.invokeListeners(evt)) {
+            return -1;
+        }
+        List<Object> valueList = param.getValueList();
+        long start = System.nanoTime();
+        Exception error = conditionQuery(conn, legendBase, param, holder);
+        long duration = (System.nanoTime() - start) / 1000;
+        evt = Context.after(legendDB, conn, clazz, legendBase, valueList.toArray(), error, duration);
+        listenerHandler.invokeListeners(evt);
+        return holder.value;
+    }
+
+    public long average(LegendDB legendDB, Class<? extends IEntity> clazz,
+                    SelectParam param) {
+        Connection conn = connectionFactory.getConnection();
+        Holder<Long> holder = new Holder<>();
+        LegendBase legendBase = sqlFactory.buildAverageObject(clazz, param);
+        Context evt = Context.before(legendDB, conn, clazz, legendBase, param.getValueList().toArray());
+        if (!listenerHandler.invokeListeners(evt)) {
+            return -1;
+        }
+        List<Object> valueList = param.getValueList();
+        long start = System.nanoTime();
+        Exception error = conditionQuery(conn, legendBase, param, holder);
+        long duration = (System.nanoTime() - start) / 1000;
+        evt = Context.after(legendDB, conn, clazz, legendBase, valueList.toArray(), error, duration);
+        listenerHandler.invokeListeners(evt);
+        return holder.value;
+    }
+
+    public long min(LegendDB legendDB, Class<? extends IEntity> clazz,
+                    SelectParam param) {
+        Connection conn = connectionFactory.getConnection();
+        Holder<Long> holder = new Holder<>();
+        LegendBase legendBase = sqlFactory.buildMinObject(clazz, param);
+        Context evt = Context.before(legendDB, conn, clazz, legendBase, param.getValueList().toArray());
+        if (!listenerHandler.invokeListeners(evt)) {
+            return -1;
+        }
+        List<Object> valueList = param.getValueList();
+        long start = System.nanoTime();
+        Exception error = conditionQuery(conn, legendBase, param, holder);
+        long duration = (System.nanoTime() - start) / 1000;
+        evt = Context.after(legendDB, conn, clazz, legendBase, valueList.toArray(), error, duration);
+        listenerHandler.invokeListeners(evt);
+        return holder.value;
+    }
+
+    public long max(LegendDB legendDB, Class<? extends IEntity> clazz,
+                    SelectParam param) {
+        Connection conn = connectionFactory.getConnection();
+        Holder<Long> holder = new Holder<>();
+        LegendBase legendBase = sqlFactory.buildMaxObject(clazz, param);
+        Context evt = Context.before(legendDB, conn, clazz, legendBase, param.getValueList().toArray());
+        if (!listenerHandler.invokeListeners(evt)) {
+            return -1;
+        }
+        List<Object> valueList = param.getValueList();
+        long start = System.nanoTime();
+        Exception error = conditionQuery(conn, legendBase, param, holder);
+        long duration = (System.nanoTime() - start) / 1000;
+        evt = Context.after(legendDB, conn, clazz, legendBase, valueList.toArray(), error, duration);
+        listenerHandler.invokeListeners(evt);
+        return holder.value;
+    }
+
     public long count(LegendDB db, Class<? extends IEntity> clazz,
                      SelectParam param) {
         Connection conn = connectionFactory.getConnection();
         Holder<Long> holder = new Holder<>();
-        LegendBase legendBase = sqlFactory.buildCountSQL(clazz, param);
+        LegendBase legendBase = sqlFactory.buildCountObject(clazz, param);
         Context evt = Context.before(db, conn, clazz, legendBase, param.getValueList().toArray());
         if (!listenerHandler.invokeListeners(evt)) {
             return -1;
         }
         List<Object> valueList = param.getValueList();
         long start = System.nanoTime();
-        Exception error = null;
-        try {
-            operator.withinQuery(conn, legendBase.sql(), stmt -> {
-                int i = 1;
-                for (;i<=param.getValueList().size();i++) {
-                    stmt.setObject(i,valueList.get(i-1));
-                }
-                if (param.getOffset() > 0) {
-                    stmt.setObject(i++, param.getOffset());
-                }
-                if (param.getLimit() > 0) {
-                    stmt.setObject(i, param.getLimit());
-                }
-                ResultSet resultSet = stmt.executeQuery();
-                resultSet.next();
-                holder.value = resultSet.getLong(1);
-                return resultSet;
-            });
-        } catch (RuntimeException e) {
-            error = e;
-        }
+        Exception error = conditionQuery(conn, legendBase, param, holder);
         long duration = (System.nanoTime() - start) / 1000;
         evt = Context.after(db, conn, clazz, legendBase, valueList.toArray(), error, duration);
         listenerHandler.invokeListeners(evt);
@@ -293,6 +345,32 @@ public class Executor {
         }
         long duration = (System.nanoTime() - start) / 1000;
         listenerHandler.invokeListeners(Context.after(db, conn, clazz, legendBase, values, error, duration));
+    }
+
+    private Exception conditionQuery(Connection conn, LegendBase legendBase,
+                                     SelectParam param, Holder<Long> holder) {
+        try {
+            List<Object> valueList = param.getValueList();
+            operator.withinQuery(conn, legendBase.sql(), stmt -> {
+                int i = 1;
+                for (;i<=param.getValueList().size();i++) {
+                    stmt.setObject(i, valueList.get(i-1));
+                }
+                if (param.getOffset() > 0) {
+                    stmt.setObject(i++, param.getOffset());
+                }
+                if (param.getLimit() > 0) {
+                    stmt.setObject(i, param.getLimit());
+                }
+                ResultSet resultSet = stmt.executeQuery();
+                resultSet.next();
+                holder.value = resultSet.getLong(1);
+                return resultSet;
+            });
+        } catch (RuntimeException e) {
+            return e;
+        }
+        return null;
     }
 
     public Exception executeUpdate(Connection conn, Holder<Integer> holder, LegendBase legendBase, Object[] hybridValues) {

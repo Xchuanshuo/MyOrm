@@ -9,6 +9,7 @@ import com.legend.orm.core.model.SelectParam;
 import com.legend.orm.core.utils.MetaUtils;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -33,9 +34,38 @@ public class SQLBuilderFactory {
         return factory;
     }
 
-    public LegendBase buildCountSQL(Class<? extends IEntity> clazz, SelectParam param) {
-        param.setFieldList(Arrays.asList("count(*)"));
+    public LegendBase buildCountObject(Class<? extends IEntity> clazz, SelectParam param) {
+        param.setFieldList(Collections.singletonList("count(*)"));
         return buildFindObject(clazz, param);
+    }
+
+    public LegendBase buildAverageObject(Class<? extends IEntity> clazz, SelectParam param) {
+        polymericFunctionDispose(param, "avg");
+        return buildFindObject(clazz, param);
+    }
+
+    public LegendBase buildSumObject(Class<? extends IEntity> clazz, SelectParam param) {
+        polymericFunctionDispose(param, "sum");
+        return buildFindObject(clazz, param);
+    }
+
+    public LegendBase buildMinObject(Class<? extends IEntity> clazz, SelectParam param) {
+        polymericFunctionDispose(param, "min");
+        return buildFindObject(clazz, param);
+    }
+
+    public LegendBase buildMaxObject(Class<? extends IEntity> clazz, SelectParam param) {
+        polymericFunctionDispose(param, "max");
+        return buildFindObject(clazz, param);
+    }
+
+    // 聚合函数预处理
+    private void polymericFunctionDispose(SelectParam param, String funcStr) {
+        if (param.getFieldList().isEmpty()) {
+            throw new LegendException("The function max() must exist a column of table!");
+        }
+        String str = param.getFieldList().get(0);
+        param.setFieldList(Collections.singletonList(funcStr+"("+str+")"));
     }
 
     public String buildSelectOneSQL(Class<? extends IEntity> clazz, Object...ids) {
@@ -53,7 +83,6 @@ public class SQLBuilderFactory {
                 .where(LegendBase.and(filters));
         return legendBase.sql();
     }
-
 
     public String buildDropSQL(Class<? extends IEntity> clazz, String suffix) {
         Meta meta = MetaUtils.meta(clazz);
