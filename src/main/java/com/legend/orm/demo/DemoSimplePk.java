@@ -54,12 +54,14 @@ public class DemoSimplePk {
             System.out.println("总行数："+count);
             long max = db.limit(10).max(User.class, "id");
             System.out.println("max: "+max);
-            long min = db.offset(1).limit(10).min(User.class, "id");
+            long min = db.offset(0).limit(10).min(User.class, "id");
             System.out.println("min: "+min);
             long sum = db.sum(User.class, "id");
             System.out.println("sum: "+sum);
             long average = db.average(User.class, "id");
             System.out.println("average: "+average);
+            long counts = db.groupBy("nick").count(User.class);
+            System.out.println(counts);
         } finally {
 //            db.drop(User.class);
         }

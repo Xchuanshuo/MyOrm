@@ -8,7 +8,6 @@ import com.legend.orm.core.model.Meta;
 import com.legend.orm.core.model.SelectParam;
 import com.legend.orm.core.utils.MetaUtils;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 
@@ -125,8 +124,8 @@ public class SQLBuilderFactory {
         if (param.getFilter() != null) {
             legendBase.where(param.getFilter());
         }
-        if (param.getGroupByList()!=null && param.getGroupByList().size()>0) {
-            param.getGroupByList().forEach(legendBase::orderBy);
+        if (param.getOrderByList()!=null && param.getOrderByList().size()>0) {
+            param.getOrderByList().forEach(legendBase::orderBy);
         }
         if (param.getGroupByList()!=null && param.getGroupByList().size()>0) {
             param.getGroupByList().forEach(legendBase::groupBy);

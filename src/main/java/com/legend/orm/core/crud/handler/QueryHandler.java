@@ -87,7 +87,7 @@ public class QueryHandler {
     }
 
     public long count(Class<? extends IEntity> clazz) {
-        return this.count(clazz, null);
+        return this.count(clazz, buildParam(null, null,  Collections.emptyList().toArray()));
     }
 
     public long count(Class<? extends IEntity> clazz, LegendBase.Filterable filter, Object...values) {
