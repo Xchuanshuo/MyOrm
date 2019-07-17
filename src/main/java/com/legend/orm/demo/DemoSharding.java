@@ -42,14 +42,16 @@ public class DemoSharding {
             }
             for (int k=0;k<grid.size();k++) {
                 for (int i = 0; i < BookShelf.PARTITIONS-1; i++) {
+                    // 依次查询出所有分库的分表的行数
                     System.out.printf("db %d partition %d count %d\n", k, i,
-                            grid.count(BookShelf.class, k, String.valueOf(i))); // 依次查询出所有分库的分表的行数
+                            grid.count(BookShelf.class, k, String.valueOf(i)));
                 }
             }
             Random random = new Random();
             for (BookShelf bs: bookShelfList) {
                 bs.setComment("comment_update_" + random.nextInt(100));
-                grid.update(bs); // 更新，自动分发到相应的分库中的分表
+                // 更新，自动分发到相应的分库中的分表
+                grid.update(bs);
             }
             for (BookShelf bs: bookShelfList) {
                 // 主键查询 自动分到相应的分库中的分表

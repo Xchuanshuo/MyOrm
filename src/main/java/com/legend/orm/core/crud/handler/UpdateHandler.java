@@ -4,8 +4,6 @@ import com.legend.orm.core.Executor;
 import com.legend.orm.core.crud.LegendBase;
 import com.legend.orm.core.crud.LegendDB;
 import com.legend.orm.core.interfaces.IEntity;
-import com.legend.orm.core.model.Holder;
-import com.legend.orm.core.utils.MetaUtils;
 
 import java.util.Map;
 
