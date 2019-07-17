@@ -170,4 +170,4 @@ try {
 ```
 更多请实例参考https://github.com/Xchuanshuo/MyOrm/tree/master/src/main/java/com/legend/orm/demo
 ## 说明
-这个库是很久之前写的了，在https://github.com/pyloque/ormkids的基础上进行的改造，现在简单的整理一下，拿来当练手的东西挺合适的。
+这个库是很久之前写的了，在https://github.com/pyloque/ormkids 的基础上进行的改造，现在简单的整理一下，拿来当练手的东西挺合适的。
