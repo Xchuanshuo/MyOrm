@@ -33,7 +33,7 @@ public class User implements IEntity {
 }
 ```
 使用注解进行进行相应的字段配置后，就可以直接根据Java类自动创建对应的数据库表，包括可以
-指定主键，自增列，添加唯一索引等
+指定主键，储存引擎，自增列，添加唯一索引等
 ### crud
 ``` java
 public static void main(String[] args) {
