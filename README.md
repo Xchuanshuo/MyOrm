@@ -39,7 +39,7 @@ public class User implements IEntity {
 public static void main(String[] args) {
         DemoLegendDB db = new DemoLegendDB("orm", URI);
         try {
-            // 创建数据库
+            // 创建数据表
             db.create(User.class);
             User user1 = new User("aas fra562mjework", "hejllos", "传说salegend");
 //            User user2 = new User("bb fjramework", "wojrlds", "传asasalegendsas奇数");
